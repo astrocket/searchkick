@@ -6,7 +6,7 @@ module Searchkick
       @index = index
     end
 
-    def reindex(relation, mode:, method_name: nil, full: false, resume: false, scope: nil)
+    def reindex(relation, mode:, method_name: nil, full: false, resume: false, scope: nil, enqueue_gap: nil)
       # apply scopes
       if scope
         relation = relation.send(scope)
@@ -37,11 +37,16 @@ module Searchkick
       reindex_options = {
         mode: mode,
         method_name: method_name,
-        full: full
+        full: full,
+        enqueue_gap: enqueue_gap
       }
       record_indexer = RecordIndexer.new(index)
 
       in_batches(relation) do |items|
+        if enqueue_gap
+          sleep(enqueue_gap)
+          puts "Enqueueing BulkReindexJob: #{items.first.id} .. #{items.last.id}"
+        end
         record_indexer.reindex(items, **reindex_options)
       end
     end
